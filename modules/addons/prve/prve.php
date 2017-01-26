@@ -13,7 +13,7 @@
 		return $configarray;
 	}
 	function prve_activate() {
-		
+
 		$sql = file_get_contents('../modules/addons/prve/db.sql');
 		if (!$sql) {
 			return array('status'=>'error','description'=>'The db.sql file not found.');
@@ -29,10 +29,10 @@
 			$i++ ;
 		}
 		if (!$err)
-			return array('status'=>'success','description'=>'PRVE installed successfuly.');		
+			return array('status'=>'success','description'=>'PRVE installed successfuly.');
 
 		return array('status'=>'error','description'=>'PRVE did not activated.');
-	 
+
 	}
 
 	function prve_deactivate() {
@@ -43,14 +43,14 @@
 			   message for display here');
 		return array('status'=>'info','description'=>'If you want to give an info message to a user
 			   you can return it here');
-	 
+
 	}
-	
+
 	function prve_output($vars) {
-		
+
 		$modulelink = $vars['modulelink'];
-		
-		// Messages			
+
+		// Messages
 		if (isset($_SESSION['prve']['infomsg'])) {
 			echo '
 				<div class="infobox">
@@ -58,11 +58,11 @@
 						<span class="title">'.$_SESSION['prve']['infomsg']['title'].'</span>
 					</strong><br/>
 				'.$_SESSION['prve']['infomsg']['message'].'
-				</div>		
+				</div>
 			' ;
 			unset($_SESSION['prve']) ;
 		}
-			
+
 		echo '
 			<div id="clienttabs">
 				<ul class="nav nav-tabs admin-tabs">
@@ -74,7 +74,7 @@
 			<div class="tab-content admin-tabs">
 			' ;
 
-			
+
 			if (isset($_POST['addnewkvmplan']))
 			{
 				save_kvm_plan() ;
@@ -88,12 +88,12 @@
 			{
 				update_openvz_plan() ;
 			}
-			
+
 			if (isset($_POST['addnewopenvzplan']))
 			{
 				save_openvz_plan() ;
 			}
-			
+
 		echo '
 				<div id="plans" class="tab-pane '.($_GET['tab']=="vmplans" ? "active" : "").'">
 					<div class="btn-group btn-group-lg" role="group" aria-label="...">
@@ -105,35 +105,35 @@
 						</a>
 						<a class="btn btn-default" href="'. PRVE_BASEURL .'&amp;tab=vmplans&amp;action=add_openvz_plan">
 							<i class="fa fa-plus-square"></i>&nbsp; Add new OpenVZ plan
-						</a>						
-					</div>				
+						</a>
+					</div>
 			';
 					if ($_GET['action']=='add_kvm_plan') {
 						kvm_plan_add() ;
 					}
-					
+
 					if ($_GET['action']=='editplan') {
 						if ($_GET['vmtype']=='kvm')
 							kvm_plan_edit($_GET['id']) ;
 						else
 							openvz_plan_edit($_GET['id']) ;
 					}
-					
+
 					if($_GET['action']=='removeplan') {
 						remove_plan($_GET['id']) ;
 					}
-					
-					
+
+
 					if ($_GET['action']=='add_openvz_plan') {
 						openvz_plan_add() ;
 					}
-					
+
 					if ($_GET['action']=='planlist') {
-						echo '						
+						echo '
 
 									<table class="datatable" border="0" cellpadding="3" cellspacing="1" width="100%">
 										<tbody>
-											<tr>				
+											<tr>
 												<th>
 													id
 												</th>
@@ -207,7 +207,7 @@
 													  </td>' ;
 											echo '</tr>' ;
 										}
-							echo '			
+							echo '
 							';
 							echo '
 										</tbody>
@@ -217,7 +217,7 @@
 			echo '
 				</div>
 			';
-			
+
 			echo '
 				<div id="ippools" class="tab-pane '.($_GET['tab']=="ippools" ? "active" : "").'" >
 					<div class="btn-group">
@@ -241,14 +241,14 @@
 				if (isset($_POST['newIPpool'])) {
 					save_ip_pool() ;
 				}
-				
+
 				if ($_GET['action']=='removeippool') {
 					removeIpPool($_GET['id']) ;
 				}
 				if ($_GET['action']=='list_ips') {
 					list_ips();
 				}
-				
+
 				if ($_GET['action']=='removeip') {
 					removeip($_GET['id'],$_GET['pool_id']);
 				}
@@ -257,38 +257,39 @@
 			';
 			// License Tab
 			echo '<div id="license" class="tab-pane '.($_GET['tab']=="license" ? "active" : "").'" >' ;
-				$license=Capsule::table('mod_prve')->get()[0] ;
-				$results=prve_check_license($license->license,$license->localkey);
-				switch ($results['status']) {
-					case "Active":
-						// get new local key and save it somewhere
-						$localkeydata = $results['localkey'];
-						Capsule::table('mod_prve')->where('id',1)->update(
-							[
-								'localkey' => $localkeydata
-							]
-						);
-						echo ('<b style="color:green">Valid License key. The key is:&nbsp;'.$license->license.'</b>');
-						break;
-					case "Invalid":
-						echo ('<b style="color:red">License key is Invalid</b>');
-						enter_license_key() ;
-						break;
-					case "Expired":
-						echo ('<b style="color:red">License key is Expired, Renew or new license</b>');
-						enter_license_key() ;
-						break;
-					case "Suspended":
-						echo ('<b style="color:red">License is Suspended, Contact module customer support</b>');
-						break;
-					default:
-						die("Invalid Response");
-						break;
-				}
+				// $license=Capsule::table('mod_prve')->get()[0] ;
+				// $results=prve_check_license($license->license,$license->localkey);
+				// switch ($results['status']) {
+				// 	case "Active":
+				// 		// get new local key and save it somewhere
+				// 		$localkeydata = $results['localkey'];
+				// 		Capsule::table('mod_prve')->where('id',1)->update(
+				// 			[
+				// 				'localkey' => $localkeydata
+				// 			]
+				// 		);
+				// 		echo ('<b style="color:green">Valid License key. The key is:&nbsp;'.$license->license.'</b>');
+				// 		break;
+				// 	case "Invalid":
+				// 		echo ('<b style="color:red">License key is Invalid</b>');
+				// 		enter_license_key() ;
+				// 		break;
+				// 	case "Expired":
+				// 		echo ('<b style="color:red">License key is Expired, Renew or new license</b>');
+				// 		enter_license_key() ;
+				// 		break;
+				// 	case "Suspended":
+				// 		echo ('<b style="color:red">License is Suspended, Contact module customer support</b>');
+				// 		break;
+				// 	default:
+				// 		die("Invalid Response");
+				// 		break;
+				// }
+				echo ('<b style="color:green">PRVE is now Open-source and free to use.</b>');
 			echo '
 				</div>
 			';
-			
+
 	echo '</div>'; // end of tab-content
 	}
 
@@ -301,16 +302,16 @@
 			);
 			$_SESSION['prve']['infomsg']['title']='PRVE License key updated.' ;
 			$_SESSION['prve']['infomsg']['message']='PRVE license key updated successfuly.' ;
-			header("Location: ".PRVE_BASEURL."&tab=license");			
+			header("Location: ".PRVE_BASEURL."&tab=license");
 		}
-		
+
 		echo '<form method="post">
 			  <table class="form" border="0" cellpadding="3" cellspacing="1" width="100%">
 				<tr>
 					<td class="fieldlabel">License Key</td>
 					<td class="fieldarea">
 						<input type="text" size="100" name="licensekey" id="licensekey" required>
-					</td>					
+					</td>
 				</tr>
 			  </table>
 				<div class="btn-container">
@@ -321,7 +322,7 @@
 		';
 	}
 
-	
+
 	/* adding a KVM plan */
 	function kvm_plan_add() {
 		echo '
@@ -385,7 +386,7 @@
 						CPU emulation type. Default is KVM64
 					</td>
 				</tr>
-				
+
 				<tr>
 					<td class="fieldlabel">CPU</td>
 					<td class="fieldarea">
@@ -539,12 +540,12 @@
 					</td>
 				</tr>
 			</table>
-			
+
 			<div class="btn-container">
 				<input type="submit" class="btn btn-primary" value="Save Changes" name="addnewkvmplan" id="addnewkvmplan">
 				<input type="reset" class="btn btn-default" value="Cancel Changes">
 			</div>
-			</form>			
+			</form>
 			';
 	}
 
@@ -619,7 +620,7 @@
 						CPU emulation type. Default is KVM64
 					</td>
 				</tr>
-				
+
 				<tr>
 					<td class="fieldlabel">CPU</td>
 					<td class="fieldarea">
@@ -773,12 +774,12 @@
 					</td>
 				</tr>
 			</table>
-			
+
 			<div class="btn-container">
 				<input type="submit" class="btn btn-primary" value="Save Changes" name="updatekvmplan" id="saveeditedkvmplan">
 				<input type="reset" class="btn btn-default" value="Cancel Changes">
 			</div>
-			</form>			
+			</form>
 			';
 	}
 
@@ -868,15 +869,15 @@
 					</td>
 				</tr>
 			</table>
-			
+
 			<div class="btn-container">
 				<input type="submit" class="btn btn-primary" value="Save Changes" name="addnewopenvzplan" id="addnewopenvzplan">
 				<input type="reset" class="btn btn-default" value="Cancel Changes">
 			</div>
-			</form>			
+			</form>
 			';
 	}
-	
+
 	/* editing an OpenVZ plan */
 	function openvz_plan_edit($id) {
 		$plan= Capsule::table('mod_prve_plans')->where('id', '=', $id)->get()[0];
@@ -887,7 +888,7 @@
 		echo '<pre>' ;
 		//print_r($plan) ;
 		echo '</pre>' ;
-		
+
 		echo '
 			<form method="post">
 			<table class="form" border="0" cellpadding="3" cellspacing="1" width="100%">
@@ -971,15 +972,15 @@
 					</td>
 				</tr>
 			</table>
-			
+
 			<div class="btn-container">
 				<input type="submit" class="btn btn-primary" value="Save Changes" name="updateopenvzplan" id="updateopenvzplan">
 				<input type="reset" class="btn btn-default" value="Cancel Changes">
 			</div>
-			</form>			
+			</form>
 			';
 	}
-	
+
 	function save_kvm_plan() {
 		try {
 			Capsule::connection()->transaction(
@@ -1058,7 +1059,7 @@
 		header("Location: ".PRVE_BASEURL."&tab=vmplans&action=planlist");
 	}
 
-	
+
 	function remove_plan($id) {
 		Capsule::table('mod_prve_plans')->where('id', '=', $id)->delete();
 		header("Location: ".PRVE_BASEURL."&tab=vmplans&action=planlist");
@@ -1093,7 +1094,7 @@
 			);
 			$_SESSION['prve']['infomsg']['title']='New OpenVZ Plan added.' ;
 			$_SESSION['prve']['infomsg']['message']='New OpenVZ plan saved successfuly.' ;
-			header("Location: ".PRVE_BASEURL."&tab=vmplans&action=planlist");			
+			header("Location: ".PRVE_BASEURL."&tab=vmplans&action=planlist");
 		} catch (\Exception $e) {
 			echo "Uh oh! Inserting didn't work, but I was able to rollback. {$e->getMessage()}";
 		}
@@ -1123,7 +1124,7 @@
 		$_SESSION['prve']['infomsg']['title']='OpenVZ Plan updated.' ;
 		$_SESSION['prve']['infomsg']['message']='New KVM plan updated successfuly. (Updating plans will not effect on current Virtual machines.)' ;
 		header("Location: ".PRVE_BASEURL."&tab=vmplans&action=planlist");
-	}	
+	}
 
 	// List IP pools in table
 	function list_ip_pools() {
@@ -1163,7 +1164,7 @@
 		</form>
 		';
 	}
-	
+
 	function save_ip_pool() {
 		try {
 			Capsule::connection()->transaction(
@@ -1180,21 +1181,21 @@
 			);
 			$_SESSION['prve']['infomsg']['title']='New IP Pool added.' ;
 			$_SESSION['prve']['infomsg']['message']='New IP Pool saved successfuly.' ;
-			header("Location: ".PRVE_BASEURL."&tab=ippools&action=list_ip_pools");			
+			header("Location: ".PRVE_BASEURL."&tab=ippools&action=list_ip_pools");
 		} catch (\Exception $e) {
 			echo "Uh oh! Inserting didn't work, but I was able to rollback. {$e->getMessage()}";
-		}		
+		}
 	}
-	
+
 	function removeIpPool($id) {
 		Capsule::table('mod_prve_ip_addresses')->where('pool_id', '=', $id)->delete();
 		Capsule::table('mod_prve_ip_pools')->where('id', '=', $id)->delete();
-		
+
 		header("Location: ".PRVE_BASEURL."&tab=ippools&action=list_ip_pools");
 		$_SESSION['prve']['infomsg']['title']='IP Pool Deleted.' ;
-		$_SESSION['prve']['infomsg']['message']='Selected IP pool deleted successfuly.' ;		
+		$_SESSION['prve']['infomsg']['message']='Selected IP pool deleted successfuly.' ;
 	}
-	
+
 	// add IP address/subnet to Pool
 	function add_ip_2_pool() {
 		require_once('../modules/addons/prve/Ipv4/Subnet.php');
@@ -1251,7 +1252,7 @@
 			}
 			header("Location: ".PRVE_BASEURL."&tab=ippools&action=list_ips&id=".$_POST['pool_id']);
 			$_SESSION['prve']['infomsg']['title']='IP Address/Blocks added to Pool.' ;
-			$_SESSION['prve']['infomsg']['message']='you can remove IP addresses from the pool.' ;			
+			$_SESSION['prve']['infomsg']['message']='you can remove IP addresses from the pool.' ;
 		}
 	}
 	// List IP addresses in pool
@@ -1268,7 +1269,7 @@
 			echo '</td></tr>';
 		}
 		echo '</table>' ;
-		
+
 	}
 	// Remove IP Address
 	function removeip($id,$pool_id) {

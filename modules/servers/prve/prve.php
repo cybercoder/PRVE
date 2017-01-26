@@ -6,46 +6,46 @@ else
 
 use Illuminate\Database\Capsule\Manager as Capsule;
 
-// Check license
-$license=Capsule::table('mod_prve')->get()[0] ;
-$results=prve_check_license($license->license,$license->localkey) ;
-
-switch ($results['status']) {
-    case "Active":
-        // get new local key and save it somewhere
-        $localkeydata = $results['localkey'];
-		Capsule::table('mod_prve')->where('id',1)->update(
-			[
-				'localkey' => $localkeydata
-			]
-		);
-        break;
-    case "Invalid":
-        die("<b style='color:red'>PRVE License key is Invalid</b>");
-        break;
-    case "Expired":
-        die("<b style='color:red'>PRVE License key is Expired</b>");
-        break;
-    case "Suspended":
-        die("<b style='color:red'>PRVE License key is Suspended, contact PRVE WHMCS module support</b>");
-        break;
-    default:
-        die("<b style='color:red'>PRVE License server, Invalid Response</b>");
-        break;
-}
+// // Check license
+// $license=Capsule::table('mod_prve')->get()[0] ;
+// $results=prve_check_license($license->license,$license->localkey) ;
+//
+// switch ($results['status']) {
+//     case "Active":
+//         // get new local key and save it somewhere
+//         $localkeydata = $results['localkey'];
+// 		Capsule::table('mod_prve')->where('id',1)->update(
+// 			[
+// 				'localkey' => $localkeydata
+// 			]
+// 		);
+//         break;
+//     case "Invalid":
+//         die("<b style='color:red'>PRVE License key is Invalid</b>");
+//         break;
+//     case "Expired":
+//         die("<b style='color:red'>PRVE License key is Expired</b>");
+//         break;
+//     case "Suspended":
+//         die("<b style='color:red'>PRVE License key is Suspended, contact PRVE WHMCS module support</b>");
+//         break;
+//     default:
+//         die("<b style='color:red'>PRVE License server, Invalid Response</b>");
+//         break;
+// }
 
 global $guest ;
 function prve_ConfigOptions()
 {
 	// Reterive PRVE Cluster
 	$server=Capsule::table('tblservers')->where('type', '=', 'prve')->get()[0] ;
-	
-	
+
+
 	// Reterive Plans
 	foreach (Capsule::table('mod_prve_plans')->get() as $plan) {
 		$plans[$plan->id]=$plan->vmtype.'&nbsp;:&nbsp;'.$plan->title ;
 	}
-	
+
 	// Reterive IP Pools
 	foreach (Capsule::table('mod_prve_ip_pools')->get() as $ippool) {
 		$ippools[$ippool->id]=$ippool->title ;
@@ -57,9 +57,9 @@ function prve_ConfigOptions()
 		$nodes = $proxmox->get_node_list();
 		$first_node = $nodes[0];
 		unset($nodes);
-		
+
 		$storage_contents=$proxmox->get('/nodes/'.$first_node.'/storage/local/content') ;
-		
+
 		foreach ($storage_contents as $storage_content) {
 			if ($storage_content['content']=='vztmpl') {
 				$templates[$storage_content['volid']]=explode('.',explode('/',$storage_content['volid'])[1])[0] ;
@@ -72,7 +72,7 @@ function prve_ConfigOptions()
 		"Plan" => array(
 			"FriendlyName" => "Plan",
 			"Type" => "dropdown",
-			'Options' => $plans ,		
+			'Options' => $plans ,
 			"Description" => "The Virtual Machine Type."
 		),
 		"IPPool" => array(
@@ -87,20 +87,20 @@ function prve_ConfigOptions()
 }
 function prve_CreateAccount($params) {
 	// Reterive Plan form table
-	$plan=Capsule::table('mod_prve_plans')->where('id', '=', $params['configoption1'])->get()[0] ;	
-	
+	$plan=Capsule::table('mod_prve_plans')->where('id', '=', $params['configoption1'])->get()[0] ;
+
 	$serverip = $params["serverip"];
 	$serverusername = $params["serverusername"];
 	$serverpassword = $params["serverpassword"];
-	
+
 	$vm_settings=array() ;
-	
-	
+
+
 	//$ip=Capsule::select('select * from mod_prve_ip_addresses where pool_id='.$params['configoption2'].' and ipaddress not in(select ipaddress from mod_prve_vms) limit 1')[0] ;
-	
+
 	// select a ip address from pool
 	$ip=Capsule::select('select ipaddress,mask,gateway from mod_prve_ip_addresses i INNER JOIN mod_prve_ip_pools p on (i.pool_id=p.id and p.id='.$params['configoption2'].') where  i.ipaddress not in(select ipaddress from mod_prve_vms) limit 1')[0] ;
-	
+
 	if (!empty($params['customfields']['KVMTemplate'])) {
 		file_put_contents('d:\log.txt', $params['customfields']['KVMTemplate']);
 
@@ -124,11 +124,11 @@ function prve_CreateAccount($params) {
 									'gateway'=>$ip->gateway,
 									'created'=>date("Y-m-d H:i:s"),
 								]
-							);				
+							);
 				return true ;
 			}
 		}
-	
+
 	} else {
 		$vm_settings['vmid']=($params["serviceid"])+100;
 		if ($plan->vmtype=='openvz') {
@@ -147,15 +147,15 @@ function prve_CreateAccount($params) {
 			$vm_settings['cpu']=$plan->cpuemu ;
 			$vm_settings['kvm']=$plan->kvm ;
 			$vm_settings['onboot']=$plan->onboot ;
-			
+
 			$vm_settings[$plan->disktype.'0']='local:'.$plan->disk.',format='.$plan->diskformat ;
 			if (!empty($plan->diskcache))
 				$vm_settings[$plan->disktype.'0'].= ',cache='.$plan->diskcache ;
-			
+
 			// Assign ISO File
 			if (isset($params['customfields']['ISO']))
 				$vm_settings['ide2']='local:iso/'.$params['customfields']['ISO'].',media=cdrom' ;
-			
+
 			/* Network s ettings */
 			if ($plan->netmode!='none') {
 				$vm_settings['net0']=$plan->netmodel;
@@ -166,23 +166,23 @@ function prve_CreateAccount($params) {
 				if (!empty($plan->netrate))
 					$vm_settings['net0'].=',rate='.$plan->netrate ;
 			}
-			/* end of network settings */		
+			/* end of network settings */
 		}
 
 		$vm_settings['cpuunits']=$plan->cpuunits ;
 		$vm_settings['cpulimit']=$plan->cpulimit ;
-		$vm_settings['memory']=$plan->memory ;	
+		$vm_settings['memory']=$plan->memory ;
 
 		$proxmox=new PVE2_API($serverip, $serverusername, "pam", $serverpassword);
-		
+
 		if ($proxmox->login()) {
 			# Get first node name.
 			$nodes = $proxmox->get_node_list();
 			$first_node = $nodes[0];
 			unset($nodes);
-			
+
 			if ($plan->vmtype=='kvm') $v='qemu' ; else $v='lxc';
-			
+
 			if ($proxmox->post('/nodes/'.$first_node.'/'.$v,$vm_settings)) {
 				unset($vm_sttings) ;
 				Capsule::table('mod_prve_vms')->insert(
@@ -212,7 +212,7 @@ function prve_TestConnection(array $params)
         // Call the service's connection test function.
 		$serverip = $params["serverip"];
 		$serverusername = $params["serverusername"];
-		$serverpassword = $params["serverpassword"];		
+		$serverpassword = $params["serverpassword"];
 		$proxmox=new PVE2_API($serverip, $serverusername, "pam", $serverpassword);
 		if ($proxmox->login())
 			$success = true;
@@ -235,7 +235,7 @@ function prve_TestConnection(array $params)
     );
 }
 function prve_SuspendAccount(array $params) {
-	$serverip = $params["serverip"];	$serverusername = $params["serverusername"];	$serverpassword = $params["serverpassword"];		
+	$serverip = $params["serverip"];	$serverusername = $params["serverusername"];	$serverpassword = $params["serverpassword"];
 	$proxmox=new PVE2_API($serverip, $serverusername, "pam", $serverpassword);
 	if ($proxmox->login()){
 		# Get first node name.
@@ -251,7 +251,7 @@ function prve_SuspendAccount(array $params) {
 	return false;
 }
 function prve_UnsuspendAccount(array $params) {
-	$serverip = $params["serverip"];	$serverusername = $params["serverusername"];	$serverpassword = $params["serverpassword"];		
+	$serverip = $params["serverip"];	$serverusername = $params["serverusername"];	$serverpassword = $params["serverpassword"];
 	$proxmox=new PVE2_API($serverip, $serverusername, "pam", $serverpassword);
 	if ($proxmox->login()){
 		# Get first node name.
@@ -269,7 +269,7 @@ function prve_UnsuspendAccount(array $params) {
 
 
 function prve_TerminateAccount(array $params) {
-	$serverip = $params["serverip"];	$serverusername = $params["serverusername"];	$serverpassword = $params["serverpassword"];		
+	$serverip = $params["serverip"];	$serverusername = $params["serverusername"];	$serverpassword = $params["serverpassword"];
 	$proxmox=new PVE2_API($serverip, $serverusername, "pam", $serverpassword);
 	if ($proxmox->login()){
 		# Get first node name.
@@ -286,7 +286,7 @@ function prve_TerminateAccount(array $params) {
 		}
 	}
 	return false ;
-	
+
 }
 // class
 	// WHMCS Decrypter
@@ -299,20 +299,20 @@ function prve_TerminateAccount(array $params) {
 		/**
 		 * String length of hashed values using the current algorithm
 		 * @var	int
-		 **/	
+		 **/
 		var $hash_lenth;
 		/**
 		 * Switch base64 enconding on / off
 		 * @var	bool	true = use base64, false = binary output / input
-		 **/	
+		 **/
 		var $base64;
 		/**
 		 * Secret value added to randomize output and protect the user provided key
 		 * @var	string	Change this value to add more randomness to your encryption
-		 **/	
+		 **/
 		var $salt = 'Change this to any secret value you like. "d41d8cd98f00b204e9800998ecf8427e" might be a good example.';
-		
-	
+
+
 		/**
 		 * Constructor method
 		 *
@@ -322,19 +322,19 @@ function prve_TerminateAccount(array $params) {
 		 * @return mixed
 		 */
 		function hash_encryption($key, $base64 = true) {
-			
+
 			global $cc_encryption_hash;
-			
+
 			// Toggle base64 usage on / off
 			$this->base64 = $base64;
-			
+
 			// Instead of using the key directly we compress it using a hash function
 			$this->hash_key = $this->_hash($key);
-			
+
 			// Remember length of hashvalues for later use
 			$this->hash_length = strlen($this->hash_key);
 		}
-			
+
 		/**
 		 * Method used for encryption
 		 * @param	string	$string	Message to be encrypted
@@ -342,19 +342,19 @@ function prve_TerminateAccount(array $params) {
 		 */
 		function encrypt($string) {
 			$iv = $this->_generate_iv();
-			
+
 			// Clear output
 			$out = '';
-			
+
 			// First block of output is ($this->hash_hey XOR IV)
 			for($c=0;$c < $this->hash_length;$c++) {
 				$out .= chr(ord($iv[$c]) ^ ord($this->hash_key[$c]));
 			}
-	
+
 			// Use IV as first key
 			$key = $iv;
 			$c = 0;
-	
+
 			// Go through input string
 			while($c < strlen($string)) {
 				// If we have used all characters of the current key we switch to a new one
@@ -370,7 +370,7 @@ function prve_TerminateAccount(array $params) {
 			if($this->base64) $out = base64_encode($out);
 			return $out;
 		}
-		
+
 		/**
 		 * Method used for decryption
 		 * @param	string	$string	Message to be decrypted
@@ -379,24 +379,24 @@ function prve_TerminateAccount(array $params) {
 		function decrypt($string) {
 			// Apply base64 decoding if necessary
 			if($this->base64) $string = base64_decode($string);
-			
+
 			// Extract encrypted IV from input
 			$tmp_iv = substr($string,0,$this->hash_length);
-			
+
 			// Extract encrypted message from input
 			$string = substr($string,$this->hash_length,strlen($string) - $this->hash_length);
 			$iv = $out = '';
-			
+
 			// Regenerate IV by xor-ing encrypted IV from block 1 and $this->hashed_key
 			// Mathematics: (IV XOR KeY) XOR Key = IV
-			for($c=0;$c < $this->hash_length;$c++) 
+			for($c=0;$c < $this->hash_length;$c++)
 			{
 				$iv .= chr(ord($tmp_iv[$c]) ^ ord($this->hash_key[$c]));
 			}
 			// Use IV as key for decrypting the first block cyphertext
 			$key = $iv;
 			$c = 0;
-			
+
 			// Loop through the whole input string
 			while($c < strlen($string)) {
 				// If we have used all characters of the current key we switch to a new one
@@ -410,7 +410,7 @@ function prve_TerminateAccount(array $params) {
 			}
 			return $out;
 		}
-	
+
 		/**
 		 * Hashfunction used for encryption
 		 *
@@ -437,7 +437,7 @@ function prve_TerminateAccount(array $params) {
 			}
 			return $out;
 		}
-		
+
 		/**
 		 * Generate a random string to initialize encryption
 		 *
@@ -454,7 +454,7 @@ function prve_TerminateAccount(array $params) {
 		function _generate_iv() {
 			// Initialize pseudo random generator
 			srand ((double)microtime()*1000000);
-			
+
 			// Collect random data.
 			// Add as many "pseudo" random sources as you can find.
 			// Possible sources: Memory usage, diskusage, file and directory content...
@@ -464,7 +464,7 @@ function prve_TerminateAccount(array $params) {
 			$iv .= serialize($GLOBALS);
 			return $this->_hash($iv);
 		}
-		
+
 		/**
 		 * Convert hexadecimal value to a binary string
 		 *
@@ -483,7 +483,7 @@ function prve_TerminateAccount(array $params) {
 
 
 function get_server_pass_from_whmcs($enc_pass){
-	
+
 	global $cc_encryption_hash;
 	// Include WHMCS database configuration file
 	include_once(dirname(dirname(dirname(dirname(__FILE__)))).'/configuration.php');
@@ -505,7 +505,7 @@ function prve_ClientAreaCustomButtonArray() {
 	);
 	return $buttonarray;
 }
-	
+
 function prve_ClientArea($params) {
 	//reterive virtual machine info from table mod_prve_vms
 	$guest=Capsule::table('mod_prve_vms')->where('id','=',($params['serviceid']+100))->get()[0] ;
@@ -519,60 +519,60 @@ function prve_ClientArea($params) {
 		$nodes = $proxmox->get_node_list();
 		$first_node = $nodes[0];
 		unset($nodes);
-		
+
 		$vm_config=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/config') ;
 		$vm_status=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/status/current') ;
-		
+
 		$vm_status['uptime']=time2format($vm_status['uptime']) ;
 		$vm_status['cpu']=round( $vm_status['cpu'] * 100, 2 ) ;
 
-		$vm_status['diskusepercent'] = intval( $vm_status['disk'] * 100 / $vm_status['maxdisk'] ); 
+		$vm_status['diskusepercent'] = intval( $vm_status['disk'] * 100 / $vm_status['maxdisk'] );
 		$vm_status['memusepercent']=intval( $vm_status['mem'] * 100 / $vm_status['maxmem']);
 
 		if ($guest->vtype=='lxc') $vm_status['swapusepercent']=intval( $vm_status['swap'] * 100 / $vm_status['maxswap']);
-		
+
 		// Max CPU usage Yearly
 		$rrd_params=array('timeframe'=>'year','ds'=>'cpu','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['cpu']['year']=base64_encode($vm_rrd['image']);
-		
+
 		// Max CPU usage monthly
 		$rrd_params=array('timeframe'=>'month','ds'=>'cpu','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['cpu']['month']=base64_encode($vm_rrd['image']);
-		
+
 		// Max CPU usage weekly
 		$rrd_params=array('timeframe'=>'week','ds'=>'cpu','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['cpu']['week']=base64_encode($vm_rrd['image']);
-		
+
 		// Max CPU usage daily
 		$rrd_params=array('timeframe'=>'day','ds'=>'cpu','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['cpu']['day']=base64_encode($vm_rrd['image']);
-		
+
 		// Max memory Yearly
 		$rrd_params=array('timeframe'=>'year','ds'=>'maxmem','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['maxmem']['year']=base64_encode($vm_rrd['image']);
-		
+
 		// Max memory monthly
 		$rrd_params=array('timeframe'=>'month','ds'=>'maxmem','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['maxmem']['month']=base64_encode($vm_rrd['image']);
-		
+
 		// Max memory weekly
 		$rrd_params=array('timeframe'=>'week','ds'=>'maxmem','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['maxmem']['week']=base64_encode($vm_rrd['image']);
-		
+
 		// Max memory daily
 		$rrd_params=array('timeframe'=>'day','ds'=>'maxmem','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
@@ -584,60 +584,60 @@ function prve_ClientArea($params) {
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['netinout']['year']=base64_encode($vm_rrd['image']);
-		
+
 		// Network rate monthly
 		$rrd_params=array('timeframe'=>'month','ds'=>'netin,netout','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['netinout']['month']=base64_encode($vm_rrd['image']);
-		
+
 		// Network rate weekly
 		$rrd_params=array('timeframe'=>'week','ds'=>'netin,netout','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['netinout']['week']=base64_encode($vm_rrd['image']);
-		
+
 		// Network rate daily
 		$rrd_params=array('timeframe'=>'day','ds'=>'netin,netout','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['netinout']['day']=base64_encode($vm_rrd['image']);
-		
+
 		// Max IO Yearly
 		$rrd_params=array('timeframe'=>'year','ds'=>'diskread,diskwrite','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['diskrw']['year']=base64_encode($vm_rrd['image']);
-		
+
 		// Max IO monthly
 		$rrd_params=array('timeframe'=>'month','ds'=>'diskread,diskwrite','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['diskrw']['month']=base64_encode($vm_rrd['image']);
-		
+
 		// Max IO weekly
 		$rrd_params=array('timeframe'=>'week','ds'=>'diskread,diskwrite','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['diskrw']['week']=base64_encode($vm_rrd['image']);
-		
+
 		// Max IO daily
 		$rrd_params=array('timeframe'=>'day','ds'=>'diskread,diskwrite','cf'=>'AVERAGE') ;
 		$vm_rrd=$proxmox->get('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/rrd',$rrd_params) ;
 		$vm_rrd['image']=utf8_decode($vm_rrd['image']) ;
 		$vm_statistics['diskrw']['day']=base64_encode($vm_rrd['image']);
-		
+
 		unset($vm_rrd) ;
-		
+
 		$vm_config['vtype']=$guest->vtype ;
 		$vm_config['ipv4']=$guest->ipaddress ;
 		$vm_config['netmask4']=$guest->subnetmask ;
 		$vm_config['gateway4']=$guest->gateway ;
 		$vm_config['created']=$guest->created ;
-		
+
 	}
 	else echo '<script>alert("no proxmox") ;</script>' ;
-	
+
     return array(
         'templatefile' => 'clientarea',
 		'templateVariables' =>array(
@@ -666,14 +666,14 @@ function prve_noVNC($params) {
 		$first_node = $nodes[0];
 		unset($nodes);
 		$guest=Capsule::table('mod_prve_vms')->where('id','=',($params['serviceid']+100))->get()[0] ;
-		$vm_vncproxy=$proxmox->post('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/vncproxy', array( 'websocket' => '1' )) ;	
-		
+		$vm_vncproxy=$proxmox->post('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/vncproxy', array( 'websocket' => '1' )) ;
+
 		$path = 'api2/json/websocket?port=' . $vm_vncproxy['port'] . '&user=' . $serverusername . '@pam' . '&vmid=' . ($params['serviceid']+100) . '&vncticket=' . urlencode($vm_vncproxy['ticket']);
-		
-		
+
+
 		$url='./modules/servers/prve/novnc/novnc_pve.php?host='.$serverip.'&port=8006&ticket='.$vm_vncproxy['ticket'].'&path='.urlencode($path) ;
 		echo '<script>window.open("'.$url.'")</script>';
-		
+
 		//echo '<script>window.open("./modules/servers/prve/noVNC/vnc.php?node=pve&console=lxc&vmid=136&port='.$vm_vncwebsocket['port'].'&ticket='.$vm_vncproxy['ticket'].'")</script>';
 	}
 }
@@ -689,9 +689,9 @@ function prve_javaVNC($params){
 		$nodes = $proxmox->get_node_list();
 		$first_node = $nodes[0];
 		unset($nodes);
-		
+
 		$guest=Capsule::table('mod_prve_vms')->where('id','=',($params['serviceid']+100))->get()[0] ;
-		
+
 		$vm_vncproxy=$proxmox->post('/nodes/'.$first_node.'/'.$guest->vtype.'/'.($params['serviceid']+100) .'/vncproxy') ;
 
 		$javaVNCparams=array() ;
@@ -765,7 +765,7 @@ function prve_vmStop($params) {
 function mask2cidr($mask){
   $long = ip2long($mask);
   $base = ip2long('255.255.255.255');
-  return 32-log(($long ^ $base)+1,2);      
+  return 32-log(($long ^ $base)+1,2);
 }
 
 function bytes2format($bytes, $precision = 2, $_1024 = true) {
@@ -809,5 +809,5 @@ function time2format($s) {
 		$str .= $s . '';
 	}
 	return $str;
-}	
+}
 ?>
